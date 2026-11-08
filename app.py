@@ -13,6 +13,7 @@ st.set_page_config(
 
 
 
+raw_df = pd.read_csv("Exam_Score_Prediction.csv")
 df = pd.read_csv("exam_score_cleaned.csv")
 
 
@@ -21,7 +22,6 @@ model = joblib.load("best_model.joblib")
 
 
 comparison = pd.read_csv("model_comparison.csv")
-
 
 
 st.sidebar.title("Exam Score Prediction")
@@ -58,21 +58,23 @@ if page == "Project Details":
     col3.metric("Target Variable", "Exam Score")
 
 
+
 elif page == "Dataset":
 
     st.title("Dataset Overview")
 
     st.subheader("First 5 Records")
-    st.dataframe(df.head())
+    st.dataframe(raw_df.head())
 
     st.subheader("Dataset Shape")
-    st.write(f"Rows: {df.shape[0]}")
-    st.write(f"Columns: {df.shape[1]}")
+
+    st.write(f"Rows: {raw_df.shape[0]}")
+    st.write(f"Columns: {raw_df.shape[1]}")
 
     st.subheader("Data Types")
 
     st.dataframe(
-        df.dtypes.astype(str).reset_index().rename(
+        raw_df.dtypes.astype(str).reset_index().rename(
             columns={"index": "Column", 0: "Data Type"}
         )
     )
@@ -80,13 +82,17 @@ elif page == "Dataset":
     st.subheader("Missing Values")
 
     st.dataframe(
-        df.isnull().sum().reset_index().rename(
+        raw_df.isnull().sum().reset_index().rename(
             columns={"index": "Column", 0: "Missing Values"}
         )
     )
 
+    st.subheader("Duplicate Rows")
+    st.write(raw_df.duplicated().sum())
+
     st.subheader("Statistical Summary")
-    st.dataframe(df.describe())
+    st.dataframe(raw_df.describe())
+
 
 
 elif page == "EDA":
@@ -94,7 +100,7 @@ elif page == "EDA":
     st.title("Exploratory Data Analysis")
 
     st.write(
-        "Explore the dataset using interactive filters "
+        "Explore the raw dataset using interactive filters "
         "and visualizations."
     )
 
@@ -102,26 +108,26 @@ elif page == "EDA":
 
     selected_course = st.sidebar.multiselect(
         "Select Course",
-        options=sorted(df["course"].unique()),
-        default=sorted(df["course"].unique())
+        options=sorted(raw_df["course"].unique()),
+        default=sorted(raw_df["course"].unique())
     )
 
     selected_gender = st.sidebar.multiselect(
         "Select Gender",
-        options=sorted(df["gender"].unique()),
-        default=sorted(df["gender"].unique())
+        options=sorted(raw_df["gender"].unique()),
+        default=sorted(raw_df["gender"].unique())
     )
 
     selected_difficulty = st.sidebar.multiselect(
         "Select Exam Difficulty",
-        options=sorted(df["exam_difficulty"].unique()),
-        default=sorted(df["exam_difficulty"].unique())
+        options=sorted(raw_df["exam_difficulty"].unique()),
+        default=sorted(raw_df["exam_difficulty"].unique())
     )
 
-    filtered_df = df[
-        df["course"].isin(selected_course)
-        & df["gender"].isin(selected_gender)
-        & df["exam_difficulty"].isin(selected_difficulty)
+    filtered_df = raw_df[
+        raw_df["course"].isin(selected_course)
+        & raw_df["gender"].isin(selected_gender)
+        & raw_df["exam_difficulty"].isin(selected_difficulty)
     ]
 
     if filtered_df.empty:
@@ -146,7 +152,7 @@ elif page == "EDA":
 
         sns.set_style("whitegrid")
 
-        # Exam Score Distribution
+        
         st.subheader("Exam Score Distribution")
 
         fig, ax = plt.subplots(figsize=(8, 4))
@@ -163,7 +169,7 @@ elif page == "EDA":
         st.pyplot(fig)
         plt.close(fig)
 
-        
+       
         st.subheader("Exam Score Box Plot")
 
         fig, ax = plt.subplots(figsize=(8, 3))
@@ -178,7 +184,7 @@ elif page == "EDA":
         st.pyplot(fig)
         plt.close(fig)
 
-        # Study Hours vs Exam Score
+        
         st.subheader("Study Hours vs Exam Score")
 
         fig, ax = plt.subplots(figsize=(8, 4))
@@ -196,7 +202,7 @@ elif page == "EDA":
         st.pyplot(fig)
         plt.close(fig)
 
-        
+      
         st.subheader("Class Attendance vs Exam Score")
 
         fig, ax = plt.subplots(figsize=(8, 4))
@@ -214,12 +220,12 @@ elif page == "EDA":
         st.pyplot(fig)
         plt.close(fig)
 
-        
+       
         st.subheader("Correlation Heatmap")
 
         numeric_df = filtered_df.select_dtypes(
             include="number"
-        )
+        ).drop(columns=["student_id"], errors="ignore")
 
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -245,7 +251,6 @@ elif page == "Model Comparison":
         "models using evaluation metrics."
     )
 
-   
     st.subheader("Model Performance")
 
     st.dataframe(
@@ -253,7 +258,6 @@ elif page == "Model Comparison":
         use_container_width=True
     )
 
-   
     st.subheader("Cross-Validation R2 Score Comparison")
 
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -274,7 +278,7 @@ elif page == "Model Comparison":
     st.pyplot(fig)
     plt.close(fig)
 
-    
+  
     st.subheader("Test R2 Score Comparison")
 
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -295,6 +299,7 @@ elif page == "Model Comparison":
     st.pyplot(fig)
     plt.close(fig)
 
+    
     st.subheader("Best Model")
 
     best_model_result = comparison.iloc[0]
@@ -357,8 +362,13 @@ elif page == "Prediction":
 
         study_method = st.selectbox(
             "Study Method",
-            ["self-study", "online videos", "coaching",
-             "group study", "mixed"]
+            [
+                "self-study",
+                "online videos",
+                "coaching",
+                "group study",
+                "mixed"
+            ]
         )
 
         facility_rating = st.selectbox(
